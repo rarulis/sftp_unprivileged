@@ -1,0 +1,19 @@
+# Secure defaults
+# See: https://stribika.github.io/2015/01/04/secure-secure-shell.html
+Protocol 2
+HostKey /var/run/sftp/ssh_host_ed25519_key
+HostKey /var/run/sftp/ssh_host_rsa_key
+
+UseDNS no
+
+# Limited access
+PermitRootLogin no
+X11Forwarding no
+AllowTcpForwarding no
+Port 2222
+# Force sftp and chroot jail
+Subsystem sftp internal-sftp
+ForceCommand internal-sftp
+
+# Enable this for more logs
+#LogLevel VERBOSE

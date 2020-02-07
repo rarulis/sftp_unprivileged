@@ -1,0 +1,43 @@
+#!/bin/bash
+set -Eeo pipefail
+
+USER_PASS="$1"
+# shellcheck disable=2154
+trap 's=$?; echo "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $s' ERR
+
+
+# Paths
+userConfPath="/etc/sftp/users.conf"
+userConfPathLegacy="/etc/sftp-users.conf"
+userConfFinalPath="/var/run/sftp/users.conf"
+
+function log() {
+    echo "[$0] $*" >&2
+}
+
+
+# Backward compatibility with legacy config path
+if [ ! -f "$userConfPath" ] && [ -f "$userConfPathLegacy" ]; then
+    mkdir -p "$(dirname $userConfPath)"
+    ln -s "$userConfPathLegacy" "$userConfPath"
+fi
+
+# change user password
+if [ -z "$USER_PASS" ]; then
+  log "No password passed. Using default password"
+else
+  log "changing user password"
+#  echo work: "$USER_PASS" | chpasswd
+  echo -n -e "changeme\n$USER_PASS\n$USER_PASS" | passwd
+fi
+
+# Generate unique ssh keys for this container, if needed
+if [ ! -f /var/run/sftp/ssh_host_ed25519_key ]; then
+	ssh-keygen -t ed25519 -f /var/run/sftp/ssh_host_ed25519_key -N ''
+fi
+if [ ! -f /var/run/sftp/ssh_host_rsa_key ]; then
+	ssh-keygen -t rsa -b 4096 -f /var/run/sftp/ssh_host_rsa_key -N ''
+fi
+
+log "Executing sshd"
+exec /usr/sbin/sshd -D -e
